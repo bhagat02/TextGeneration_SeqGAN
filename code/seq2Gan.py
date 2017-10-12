@@ -8,9 +8,9 @@ from roll import ROLLOUT
 from lstm import TARGET_LSTM
 import cPickle
 
-#########################################################################################
+
 #  Generator  Hyper-parameters
-######################################################################################
+
 EMB_DIM = 32 # embedding dimension
 HIDDEN_DIM = 32 # hidden state dimension of lstm cell
 SEQ_LENGTH = 20 # sequence length
@@ -19,9 +19,8 @@ PRE_EPOCH_NUM = 120 # supervise (maximum likelihood estimation) epochs
 SEED = 88
 BATCH_SIZE = 64
 
-#########################################################################################
 #  Discriminator  Hyper-parameters
-#########################################################################################
+
 dis_embedding_dim = 64
 dis_filter_sizes = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 15, 20]
 dis_num_filters = [100, 200, 200, 200, 200, 100, 100, 100, 100, 100, 160, 160]
@@ -29,9 +28,9 @@ dis_dropout_keep_prob = 0.75
 dis_l2_reg_lambda = 0.2
 dis_batch_size = 64
 
-#########################################################################################
+
 #  Basic Training Parameters
-#########################################################################################
+
 TOTAL_BATCH = 200
 positive_file = 'save/real_data.txt'
 negative_file = 'save/generator_sample.txt'
@@ -53,7 +52,7 @@ def generate_samples(sess, trainable_model, batch_size, generated_num, output_fi
 
 def target_loss(sess, target_lstm, data_loader):
     # target_loss means the oracle negative log-likelihood tested with the oracle model "target_lstm"
-    # For more details, please see the Section 4 in https://arxiv.org/abs/1609.05473
+  
     nll = []
     data_loader.reset_pointer()
 
@@ -136,7 +135,7 @@ def main():
 
     rollout = ROLLOUT(generator, 0.8)
 
-    print '#########################################################################'
+  
     print 'Start Adversarial Training...'
     log.write('adversarial training...\n')
     for total_batch in range(TOTAL_BATCH):

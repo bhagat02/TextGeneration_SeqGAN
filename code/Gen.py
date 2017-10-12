@@ -22,7 +22,7 @@ class Generator(object):
         self.expected_reward = tf.Variable(tf.zeros([self.sequence_length]))
 
         with tf.variable_scope('generator'):
-            self.g_embeddings = tf.Variable(self.init_matrix([self.num_emb, self.emb_dim]))
+            self.g_embeddings = tf.Variable(self.init_matrix([self.emb, self.emb_dim]))
             self.g_params.append(self.g_embeddings)
             self.g_recurrent_unit = self.create_recurrent_unit(self.g_params)  # maps h_tm1 to h_t for generator
             self.g_output_unit = self.create_output_unit(self.g_params)  # maps h_t to o_t (output token logits)
@@ -50,7 +50,7 @@ class Generator(object):
             log_prob = tf.log(tf.nn.softmax(o_t))
             next_token = tf.cast(tf.reshape(tf.multinomial(log_prob, 1), [self.batch_size]), tf.int32)
             x_tp1 = tf.nn.embedding_lookup(self.g_embeddings, next_token)  # batch x emb_dim
-            gen_o = gen_o.write(i, tf.reduce_sum(tf.multiply(tf.one_hot(next_token, self.num_emb, 1.0, 0.0),
+            gen_o = gen_o.write(i, tf.reduce_sum(tf.multiply(tf.one_hot(next_token, self.emb, 1.0, 0.0),
                                                              tf.nn.softmax(o_t)), 1))  # [batch_size] , prob
             gen_x = gen_x.write(i, next_token)  # indices, batch_size
             return i + 1, x_tp1, h_t, gen_o, gen_x
@@ -106,8 +106,8 @@ class Generator(object):
         
         self.g_loss = -tf.reduce_sum(
             tf.reduce_sum(
-                tf.one_hot(tf.to_int32(tf.reshape(self.x, [-1])), self.num_emb, 1.0, 0.0) * tf.log(
-                    tf.clip_by_value(tf.reshape(self.g_predictions, [-1, self.num_emb]), 1e-20, 1.0)
+                tf.one_hot(tf.to_int32(tf.reshape(self.x, [-1])), self.emb, 1.0, 0.0) * tf.log(
+                    tf.clip_by_value(tf.reshape(self.g_predictions, [-1, self.emb]), 1e-20, 1.0)
                 ), 1) * tf.reshape(self.rewards, [-1])
         )
 

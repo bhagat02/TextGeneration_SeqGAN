@@ -3,10 +3,10 @@ from tensorflow.python.ops import tensor_array_ops, control_flow_ops
 
 
 class Generator(object):
-    def __init__(self, num_emb, batch_size, emb_dim, hidden_dim,
+    def __init__(self, emb, batch_size, emb_dim, hidden_dim,
                  sequence_length, start_token,
                  learning_rate=0.01, reward_gamma=0.95):
-        self.num_emb = num_emb
+        self.num_emb = emb
         self.batch_size = batch_size
         self.emb_dim = emb_dim
         self.hidden_dim = hidden_dim
@@ -44,8 +44,8 @@ class Generator(object):
         gen_x = tensor_array_ops.TensorArray(dtype=tf.int32, size=self.sequence_length,
                                              dynamic_size=False, infer_shape=True)
 
-        def _g_recurrence(i, x_t, h_tm1, gen_o, gen_x):
-            h_t = self.g_recurrent_unit(x_t, h_tm1)  # hidden_memory_tuple
+        def _g_recurrence(i, x, h_tm1, gen_o, gen_x):
+            h_t = self.g_recurrent_unit(x, h_tm1)  # hidden_memory_tuple
             o_t = self.g_output_unit(h_t)  # batch x vocab , logits not prob
             log_prob = tf.log(tf.nn.softmax(o_t))
             next_token = tf.cast(tf.reshape(tf.multinomial(log_prob, 1), [self.batch_size]), tf.int32)
@@ -61,9 +61,8 @@ class Generator(object):
             loop_vars=(tf.constant(0, dtype=tf.int32),
                        tf.nn.embedding_lookup(self.g_embeddings, self.start_token), self.h0, gen_o, gen_x))
 
-        self.gen_x = self.gen_x.stack()  # seq_length x batch_size
-        self.gen_x = tf.transpose(self.gen_x, perm=[1, 0])  # batch_size x seq_length
-
+        self.gen_x = self.gen_x.stack()  
+        self.gen_x = tf.transpose(self.gen_x, perm=[1, 0])  
         # supervised pretraining for generator
         g_predictions = tensor_array_ops.TensorArray(
             dtype=tf.float32, size=self.sequence_length,
@@ -73,8 +72,8 @@ class Generator(object):
             dtype=tf.float32, size=self.sequence_length)
         ta_emb_x = ta_emb_x.unstack(self.processed_x)
 
-        def _pretrain_recurrence(i, x_t, h_tm1, g_predictions):
-            h_t = self.g_recurrent_unit(x_t, h_tm1)
+        def _pretrain_recurrence(i, x, h_tm1, g_predictions):
+            h_t = self.g_recurrent_unit(x, h_tm1)
             o_t = self.g_output_unit(h_t)
             g_predictions = g_predictions.write(i, tf.nn.softmax(o_t))  # batch x vocab_size
             x_tp1 = ta_emb_x.read(i)
@@ -102,9 +101,9 @@ class Generator(object):
         self.pretrain_grad, _ = tf.clip_by_global_norm(tf.gradients(self.pretrain_loss, self.g_params), self.grad_clip)
         self.pretrain_updates = pretrain_opt.apply_gradients(zip(self.pretrain_grad, self.g_params))
 
-        #######################################################################################################
-        #  Unsupervised Training
-        #######################################################################################################
+       
+        #  Unsupervised Training starting from here
+        
         self.g_loss = -tf.reduce_sum(
             tf.reduce_sum(
                 tf.one_hot(tf.to_int32(tf.reshape(self.x, [-1])), self.num_emb, 1.0, 0.0) * tf.log(
@@ -192,8 +191,8 @@ class Generator(object):
         return unit
 
     def create_output_unit(self, params):
-        self.Wo = tf.Variable(self.init_matrix([self.hidden_dim, self.num_emb]))
-        self.bo = tf.Variable(self.init_matrix([self.num_emb]))
+        self.Wo = tf.Variable(self.init_matrix([self.hidden_dim, self.emb]))
+        self.bo = tf.Variable(self.init_matrix([self.emb]))
         params.extend([self.Wo, self.bo])
 
         def unit(hidden_memory_tuple):

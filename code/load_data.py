@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class Gen_Data_loader():
+class Gen_load_data():
     def __init__(self, batch_size):
         self.batch_size = batch_size
         self.token_stream = []
@@ -55,17 +55,17 @@ class Dis_dataloader():
                     negative_examples.append(parse_line)
         self.sentences = np.array(positive_examples + negative_examples)
 
-        # Generate labels
+        # Generating the  labels
         positive_labels = [[0, 1] for _ in positive_examples]
         negative_labels = [[1, 0] for _ in negative_examples]
         self.labels = np.concatenate([positive_labels, negative_labels], 0)
 
-        # Shuffle the data
+        # Shuffling  the data
         shuffle_indices = np.random.permutation(np.arange(len(self.labels)))
         self.sentences = self.sentences[shuffle_indices]
         self.labels = self.labels[shuffle_indices]
 
-        # Split batches
+        # Splitting the batches
         self.num_batch = int(len(self.labels) / self.batch_size)
         self.sentences = self.sentences[:self.num_batch * self.batch_size]
         self.labels = self.labels[:self.num_batch * self.batch_size]

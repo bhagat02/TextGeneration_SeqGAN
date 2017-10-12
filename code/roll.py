@@ -44,15 +44,15 @@ class ROLLOUT(object):
                                              dynamic_size=False, infer_shape=True)
 
         # When current index i < given_num, use the provided tokens as the input at each time step
-        def _g_recurrence_1(i, x_t, h_tm1, given_num, gen_x):
-            h_t = self.g_recurrent_unit(x_t, h_tm1)  # hidden_memory_tuple
+        def _g_recurrence_1(i, x, h_tm1, given_num, gen_x):
+            h_t = self.g_recurrent_unit(x, h_tm1)  # hidden_memory_tuple
             x_tp1 = ta_emb_x.read(i)
             gen_x = gen_x.write(i, ta_x.read(i))
             return i + 1, x_tp1, h_t, given_num, gen_x
 
         # When current index i >= given_num, start roll-out, use the output as time step t as the input at time step t+1
-        def _g_recurrence_2(i, x_t, h_tm1, given_num, gen_x):
-            h_t = self.g_recurrent_unit(x_t, h_tm1)  # hidden_memory_tuple
+        def _g_recurrence_2(i, x, h_tm1, given_num, gen_x):
+            h_t = self.g_recurrent_unit(x, h_tm1)  # hidden_memory_tuple
             o_t = self.g_output_unit(h_t)  # batch x vocab , logits not prob
             log_prob = tf.log(tf.nn.softmax(o_t))
             next_token = tf.cast(tf.reshape(tf.multinomial(log_prob, 1), [self.batch_size]), tf.int32)
@@ -60,7 +60,7 @@ class ROLLOUT(object):
             gen_x = gen_x.write(i, next_token)  # indices, batch_size
             return i + 1, x_tp1, h_t, given_num, gen_x
 
-        i, x_t, h_tm1, given_num, self.gen_x = control_flow_ops.while_loop(
+        i, x, h_tm1, given_num, self.gen_x = control_flow_ops.while_loop(
             cond=lambda i, _1, _2, given_num, _4: i < given_num,
             body=_g_recurrence_1,
             loop_vars=(tf.constant(0, dtype=tf.int32),
@@ -69,7 +69,7 @@ class ROLLOUT(object):
         _, _, _, _, self.gen_x = control_flow_ops.while_loop(
             cond=lambda i, _1, _2, _3, _4: i < self.sequence_length,
             body=_g_recurrence_2,
-            loop_vars=(i, x_t, h_tm1, given_num, self.gen_x))
+            loop_vars=(i, x, h_tm1, given_num, self.gen_x))
 
         self.gen_x = self.gen_x.stack()  # seq_length x batch_size
         self.gen_x = tf.transpose(self.gen_x, perm=[1, 0])  # batch_size x seq_length
